@@ -1,0 +1,28 @@
+# Binaries
+bin/
+dist/
+
+# Build output
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Coverage
+coverage.out
+
+# IDE
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Environment
+.env
+
+# Logs
+*.log
