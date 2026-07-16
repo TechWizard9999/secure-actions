@@ -12,10 +12,14 @@ type Response struct {
 	Message string `json:"message" jsonschema:"The pong response"`
 }
 
-type Handler struct{}
+type Dependencies struct{}
 
-func New() *Handler {
-	return &Handler{}
+type Handler struct {
+	deps Dependencies
+}
+
+func New(deps Dependencies) *Handler {
+	return &Handler{deps: deps}
 }
 
 func (h *Handler) Execute(

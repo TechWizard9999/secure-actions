@@ -1,0 +1,10 @@
+services:
+  mongo:
+    image: mongo:8
+    restart: unless-stopped
+    ports:
+      - "27018:27017"
+    volumes:
+      - ~/.secure-actions/mongo:/data/db
+    environment:
+      MONGO_INITDB_DATABASE: secure_actions
