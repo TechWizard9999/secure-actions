@@ -36,5 +36,5 @@ jobs:
             feat
             chore
           requireScope: false
-          subjectPattern: ^(\[#\d+\]: )?.+$
+          subjectPattern: '^(\[#\d+\]: )?.+$'
           subjectPatternError: "PR title must follow: fix|feat|chore: description OR fix|feat|chore: [#issue]: description"
