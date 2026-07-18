@@ -4,16 +4,18 @@
 
 If you discover a security vulnerability in secure-actions, **please do not open a public issue.**
 
-Instead, report it privately:
+Instead, report it privately using one of these methods:
 
-1. Email: [Create a security advisory](https://github.com/Kota-Karthik/secure-actions/security/advisories/new) on GitHub
-2. Include:
-   - Description of the vulnerability
-   - Steps to reproduce
-   - Potential impact
-   - Suggested fix (if any)
+1. **GitHub Private Security Advisory** (preferred) — Go to [Security > Advisories > New draft](https://github.com/Kota-Karthik/secure-actions/security/advisories/new). This creates a private channel visible only to you and the maintainers.
+2. **Email** — Send to `kotakarthik2307@gmail.com` with subject line `[secure-actions] Security Report`.
 
-We will acknowledge receipt within 48 hours and provide a timeline for a fix.
+Include:
+- Description of the vulnerability
+- Steps to reproduce
+- Potential impact
+- Suggested fix (if any)
+
+We will acknowledge receipt within 48 hours and provide a timeline for a fix. Discussion and patches will happen within the private advisory until a fix is released.
 
 ## Scope
 
