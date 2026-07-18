@@ -22,6 +22,46 @@ jobs:
       - name: Vet
         run: go vet ./...
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Run tests with coverage
+        run: |
+          go test -coverprofile=coverage.out ./internal/... 2>&1 | tee test-output.txt
+          if grep -q "FAIL" test-output.txt; then
+            echo "Tests failed"
+            exit 1
+          fi
+
+      - name: Check coverage threshold (80%)
+        run: |
+          echo "Checking per-package coverage (minimum 80%)..."
+          FAILED=0
+          while IFS= read -r line; do
+            pkg=$(echo "$line" | awk '{print $2}')
+            coverage=$(echo "$line" | grep -oP '\d+\.\d+(?=%)' || echo "0")
+            if [ -z "$coverage" ]; then
+              continue
+            fi
+            pass=$(echo "$coverage >= 80.0" | bc -l)
+            if [ "$pass" -eq 0 ]; then
+              echo "FAIL: $pkg has ${coverage}% coverage (minimum 80%)"
+              FAILED=1
+            else
+              echo "OK:   $pkg — ${coverage}%"
+            fi
+          done < <(grep "^ok" test-output.txt)
+          if [ "$FAILED" -eq 1 ]; then
+            exit 1
+          fi
+          echo "All packages meet 80% coverage threshold."
+
   validate-pr-title:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
