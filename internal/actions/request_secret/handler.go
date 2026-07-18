@@ -15,8 +15,7 @@ var validIdentifier = regexp.MustCompile(`^[a-z0-9-]+$`)
 
 type Dependencies struct {
 	SecretManager secrets.Manager
-	// AuditRecorder audit.Recorder
-	// Logger        logger.Logger
+	EncryptionKey []byte
 }
 
 type Handler struct {
@@ -116,9 +115,7 @@ func (h *Handler) Execute(
 
 	log.Printf("[request_secret] encrypting and storing secret %q", name)
 
-	// Passphrase is derived from the identifier so it's deterministic per-name.
-	// A real implementation would use a proper KMS or user-supplied master key.
-	encrypted, err := secrets.Encrypt(value, name)
+	encrypted, err := secrets.Encrypt(value, h.deps.EncryptionKey)
 	if err != nil {
 		log.Printf("[request_secret] encrypt error: %v", err)
 		return nil, Response{}, fmt.Errorf("encrypt: %w", err)

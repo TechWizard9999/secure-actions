@@ -30,6 +30,7 @@ type Response struct {
 
 type Dependencies struct {
 	SecretManager secrets.Manager
+	EncryptionKey []byte
 }
 
 type Handler struct {
@@ -137,7 +138,7 @@ func (h *Handler) substituteSecrets(ctx context.Context, input string) (string, 
 			return "", fmt.Errorf("secret %q not found", identifier)
 		}
 
-		decrypted, err := secrets.Decrypt(encrypted, identifier)
+		decrypted, err := secrets.Decrypt(encrypted, h.deps.EncryptionKey)
 		if err != nil {
 			return "", fmt.Errorf("decrypt secret %q: %w", identifier, err)
 		}

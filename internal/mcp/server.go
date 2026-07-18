@@ -15,6 +15,7 @@ import (
 
 type Dependencies struct {
 	SecretManager secrets.Manager
+	EncryptionKey []byte
 }
 
 type Server struct {
@@ -48,6 +49,7 @@ func New(deps Dependencies) *Server {
 		},
 		request_secret.New(request_secret.Dependencies{
 			SecretManager: deps.SecretManager,
+			EncryptionKey: deps.EncryptionKey,
 		}).Execute,
 	)
 
@@ -81,6 +83,7 @@ func New(deps Dependencies) *Server {
 		},
 		http_request.New(http_request.Dependencies{
 			SecretManager: deps.SecretManager,
+			EncryptionKey: deps.EncryptionKey,
 		}).Execute,
 	)
 

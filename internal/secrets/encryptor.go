@@ -4,16 +4,13 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
 	"io"
 )
 
-// Encrypt encrypts plaintext using AES-256-GCM with a key derived from passphrase.
-func Encrypt(plaintext, passphrase string) (string, error) {
-	key := deriveKey(passphrase)
-
+// Encrypt encrypts plaintext using AES-256-GCM with the provided 32-byte master key.
+func Encrypt(plaintext string, key []byte) (string, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return "", fmt.Errorf("new cipher: %w", err)
@@ -33,10 +30,8 @@ func Encrypt(plaintext, passphrase string) (string, error) {
 	return base64.StdEncoding.EncodeToString(ciphertext), nil
 }
 
-// Decrypt decrypts a base64-encoded AES-256-GCM ciphertext.
-func Decrypt(encoded, passphrase string) (string, error) {
-	key := deriveKey(passphrase)
-
+// Decrypt decrypts a base64-encoded AES-256-GCM ciphertext using the provided 32-byte master key.
+func Decrypt(encoded string, key []byte) (string, error) {
 	data, err := base64.StdEncoding.DecodeString(encoded)
 	if err != nil {
 		return "", fmt.Errorf("decode: %w", err)
@@ -62,9 +57,4 @@ func Decrypt(encoded, passphrase string) (string, error) {
 		return "", fmt.Errorf("decrypt: %w", err)
 	}
 	return string(plaintext), nil
-}
-
-func deriveKey(passphrase string) []byte {
-	h := sha256.Sum256([]byte(passphrase))
-	return h[:]
 }

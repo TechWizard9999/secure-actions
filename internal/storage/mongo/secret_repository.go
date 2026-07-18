@@ -21,8 +21,18 @@ type SecretRepository struct {
 	col *mongo.Collection
 }
 
-func NewSecretRepository(client *Client) *SecretRepository {
-	return &SecretRepository{col: client.Collection(CollectionSecrets)}
+func NewSecretRepository(ctx context.Context, client *Client) (*SecretRepository, error) {
+	col := client.Collection(CollectionSecrets)
+
+	_, err := col.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys:    bson.D{{Key: "identifier", Value: 1}},
+		Options: options.Index().SetUnique(true),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create identifier index: %w", err)
+	}
+
+	return &SecretRepository{col: col}, nil
 }
 
 func (r *SecretRepository) Set(ctx context.Context, identifier, encryptedValue string) error {
