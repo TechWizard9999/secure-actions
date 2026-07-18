@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kotakarthik/secure-actions/internal/elicit"
 	"github.com/kotakarthik/secure-actions/internal/secrets"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -20,6 +21,7 @@ type Response struct {
 
 type Dependencies struct {
 	SecretManager secrets.Manager
+	Elicitor      elicit.Elicitor
 }
 
 type Handler struct {
@@ -48,7 +50,9 @@ func (h *Handler) Execute(
 		}, nil
 	}
 
-	result, err := req.Session.Elicit(ctx, &mcp.ElicitParams{
+	e := h.elicitor(req)
+
+	result, err := e.Elicit(ctx, &mcp.ElicitParams{
 		Message: fmt.Sprintf("Are you sure you want to delete secret %q? This action cannot be undone.", input.Name),
 		RequestedSchema: map[string]any{
 			"type": "object",
@@ -83,4 +87,11 @@ func (h *Handler) Execute(
 		Deleted:    true,
 		Message:    fmt.Sprintf("Secret %q deleted successfully", input.Name),
 	}, nil
+}
+
+func (h *Handler) elicitor(req *mcp.CallToolRequest) elicit.Elicitor {
+	if h.deps.Elicitor != nil {
+		return h.deps.Elicitor
+	}
+	return &elicit.SessionElicitor{Session: req.Session}
 }

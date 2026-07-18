@@ -7,6 +7,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/kotakarthik/secure-actions/internal/elicit"
 	"github.com/kotakarthik/secure-actions/internal/secrets"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
@@ -16,6 +17,7 @@ var validIdentifier = regexp.MustCompile(`^[a-z0-9-]+$`)
 type Dependencies struct {
 	SecretManager secrets.Manager
 	EncryptionKey []byte
+	Elicitor      elicit.Elicitor
 }
 
 type Handler struct {
@@ -26,16 +28,22 @@ func New(deps Dependencies) *Handler {
 	return &Handler{deps: deps}
 }
 
+func normalizeIdentifier(raw string) string {
+	return strings.ToLower(strings.ReplaceAll(raw, " ", "-"))
+}
+
 func (h *Handler) Execute(
 	ctx context.Context,
 	req *mcp.CallToolRequest,
 	input Request,
 ) (*mcp.CallToolResult, Response, error) {
 
-	name := strings.ToLower(strings.ReplaceAll(input.Name, " ", "-"))
+	name := normalizeIdentifier(input.Name)
 	if !validIdentifier.MatchString(name) {
 		return nil, Response{}, fmt.Errorf("invalid identifier %q: only letters, numbers, spaces, and hyphens are allowed", input.Name)
 	}
+
+	e := h.elicitor(req)
 
 	_, exists, err := h.deps.SecretManager.Get(ctx, name)
 	if err != nil {
@@ -43,7 +51,7 @@ func (h *Handler) Execute(
 	}
 
 	if exists {
-		confirm, err := req.Session.Elicit(ctx, &mcp.ElicitParams{
+		confirm, err := e.Elicit(ctx, &mcp.ElicitParams{
 			Message: fmt.Sprintf("Secret %q already exists. Do you want to update it?", name),
 			RequestedSchema: map[string]any{
 				"type": "object",
@@ -73,7 +81,7 @@ func (h *Handler) Execute(
 
 	log.Printf("[request_secret] eliciting value for secret %q", name)
 
-	result, err := req.Session.Elicit(ctx, &mcp.ElicitParams{
+	result, err := e.Elicit(ctx, &mcp.ElicitParams{
 		Message: message,
 		RequestedSchema: map[string]any{
 			"type": "object",
@@ -133,6 +141,13 @@ func (h *Handler) Execute(
 		Stored:     true,
 		Message:    fmt.Sprintf("Secret %q stored successfully", name),
 	}, nil
+}
+
+func (h *Handler) elicitor(req *mcp.CallToolRequest) elicit.Elicitor {
+	if h.deps.Elicitor != nil {
+		return h.deps.Elicitor
+	}
+	return &elicit.SessionElicitor{Session: req.Session}
 }
 
 func (h *Handler) buildElicitMessage(input Request) string {
