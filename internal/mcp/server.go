@@ -44,7 +44,7 @@ func New(deps Dependencies) *Server {
 		server,
 		&mcpSdk.Tool{
 			Name:        "request_secret",
-			Description: "Securely collect and store a secret from the user. Prompts the user via an interactive form to enter a secret value (e.g. API key, token, password). The value is encrypted with AES-256-GCM before being persisted to the database. The identifier is normalized to lowercase with hyphens (e.g. 'My Token' becomes 'my-token'). Use this before http_request when authentication credentials are needed.",
+			Description: "Securely collect and store a secret from the user. Prompts the user via an interactive form to enter a secret value (e.g. API key, token, password). The value is encrypted with AES-256-GCM before being persisted to the database. The identifier is normalized to lowercase with hyphens (e.g. 'My Token' becomes 'my-token'). If the identifier already exists, the user is prompted to confirm before the existing secret is updated. Use this before http_request when authentication credentials are needed.",
 		},
 		request_secret.New(request_secret.Dependencies{
 			SecretManager: deps.SecretManager,

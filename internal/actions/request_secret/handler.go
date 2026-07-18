@@ -38,6 +38,38 @@ func (h *Handler) Execute(
 		return nil, Response{}, fmt.Errorf("invalid identifier %q: only letters, numbers, spaces, and hyphens are allowed", input.Name)
 	}
 
+	_, exists, err := h.deps.SecretManager.Get(ctx, name)
+	if err != nil {
+		return nil, Response{}, fmt.Errorf("check existing: %w", err)
+	}
+
+	if exists {
+		confirm, err := req.Session.Elicit(ctx, &mcp.ElicitParams{
+			Message: fmt.Sprintf("Secret %q already exists. Do you want to update it?", name),
+			RequestedSchema: map[string]any{
+				"type": "object",
+				"properties": map[string]any{
+					"confirm": map[string]any{
+						"type":  "string",
+						"title": "Update existing secret?",
+						"enum":  []string{"yes", "no"},
+					},
+				},
+				"required": []string{"confirm"},
+			},
+		})
+		if err != nil {
+			return nil, Response{}, fmt.Errorf("elicit update confirmation: %w", err)
+		}
+		if confirm.Action != "accept" || confirm.Content["confirm"] != "yes" {
+			return nil, Response{
+				SecretName: name,
+				Stored:     false,
+				Message:    fmt.Sprintf("Update cancelled — secret %q was not modified", name),
+			}, nil
+		}
+	}
+
 	message := h.buildElicitMessage(input)
 
 	log.Printf("[request_secret] eliciting value for secret %q", name)
