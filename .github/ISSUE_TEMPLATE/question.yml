@@ -1,0 +1,24 @@
+name: Question
+description: Ask a question about usage or architecture
+labels: ["question"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Have a question? Ask away. Please check the README first.
+
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+      description: What would you like to know?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Any relevant context (what you're trying to achieve, what you've tried).
+    validations:
+      required: false

@@ -1,0 +1,6 @@
+# Default owner for everything
+* @Kota-Karthik
+
+# Security-sensitive paths require explicit review
+internal/secrets/ @Kota-Karthik
+internal/storage/ @Kota-Karthik
