@@ -3,6 +3,8 @@ package mcp
 import (
 	"context"
 
+	"github.com/kotakarthik/secure-actions/internal/actions/delete_secret"
+	"github.com/kotakarthik/secure-actions/internal/actions/list_secrets"
 	"github.com/kotakarthik/secure-actions/internal/actions/ping"
 	"github.com/kotakarthik/secure-actions/internal/actions/request_secret"
 	"github.com/kotakarthik/secure-actions/internal/secrets"
@@ -44,6 +46,28 @@ func New(deps Dependencies) *Server {
 			Description: "Prompts the user for a secret value, encrypts it, and stores it for later use",
 		},
 		request_secret.New(request_secret.Dependencies{
+			SecretManager: deps.SecretManager,
+		}).Execute,
+	)
+
+	mcpSdk.AddTool(
+		server,
+		&mcpSdk.Tool{
+			Name:        "list_secrets",
+			Description: "Lists all stored secret identifiers",
+		},
+		list_secrets.New(list_secrets.Dependencies{
+			SecretManager: deps.SecretManager,
+		}).Execute,
+	)
+
+	mcpSdk.AddTool(
+		server,
+		&mcpSdk.Tool{
+			Name:        "delete_secret",
+			Description: "Deletes a stored secret by its identifier",
+		},
+		delete_secret.New(delete_secret.Dependencies{
 			SecretManager: deps.SecretManager,
 		}).Execute,
 	)

@@ -5,7 +5,6 @@ go 1.25.0
 require (
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	go.mongodb.org/mongo-driver/v2 v2.8.0
-	golang.org/x/term v0.45.0
 )
 
 require (
