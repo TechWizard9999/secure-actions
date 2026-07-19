@@ -26,7 +26,15 @@ func New() (*App, error) {
 	}
 
 	ctx := context.Background()
-	mongoClient, err := mongostore.NewClient(ctx, cfg.MongoURI, cfg.Database)
+	mongoClient, err := mongostore.NewClient(ctx, cfg.MongoURI, cfg.Database, &mongostore.TLSConfig{
+		Enabled:   cfg.MongoTLS,
+		CAFile:    cfg.MongoTLSCAFile,
+		CertFile:  cfg.MongoCertFile,
+		KeyFile:   cfg.MongoKeyFile,
+		AuthDB:    cfg.MongoAuthDB,
+		Username:  cfg.MongoUsername,
+		Password:  cfg.MongoPassword,
+	})
 	if err != nil {
 		return nil, fmt.Errorf("init mongo: %w", err)
 	}
