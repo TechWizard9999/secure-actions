@@ -151,6 +151,50 @@ Permanently delete a stored secret.
 - Returns "not found" if the identifier doesn't exist
 - Prompts user with "Are you sure?" confirmation before deletion
 
+### `mcp_tool_request`
+
+Universal gateway to call any MCP tool securely with secret injection. Spawns a target MCP server process, performs the protocol handshake, and forwards the tool call — all while keeping secrets encrypted until the moment of use.
+
+**Input:**
+| Field | Required | Description |
+|-------|----------|-------------|
+| `mcpConfig` | Yes | MCP server configuration (see below) |
+| `tool` | Yes | Name of the tool to call on the target MCP server |
+| `parameters` | No | Tool input parameters (supports `<<secret:identifier>>` placeholders) |
+
+**mcpConfig fields:**
+| Field | Required | Description |
+|-------|----------|-------------|
+| `type` | Yes | Transport type: `stdio` |
+| `command` | Yes | Command to execute (e.g., `npx`) |
+| `args` | No | Command arguments (e.g., `["-y", "@modelcontextprotocol/server-github"]`) |
+| `env` | No | Environment variables (supports `<<secret:identifier>>` placeholders) |
+
+**Example — create a GitHub issue via github-mcp:**
+```json
+{
+  "mcpConfig": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "@modelcontextprotocol/server-github"],
+    "env": {
+      "GITHUB_PERSONAL_ACCESS_TOKEN": "<<secret:github-pat>>"
+    }
+  },
+  "tool": "create_issue",
+  "parameters": {
+    "owner": "my-org",
+    "repo": "my-repo",
+    "title": "Bug: login page broken",
+    "body": "Steps to reproduce..."
+  }
+}
+```
+
+**When to use `mcp_tool_request` vs `http_request`:**
+- Use `http_request` for standard REST APIs — it's faster with no process overhead
+- Use `mcp_tool_request` when the target only exposes an MCP interface, or when MCP provides richer functionality than raw HTTP
+
 ### `http_request`
 
 Execute an HTTP request with automatic secret injection.
@@ -193,6 +237,19 @@ You: "List my repos"
    Authorization: Bearer <<secret:github-pat>>
 ```
 
+### Call an MCP tool through secure-actions
+
+```
+You: "Create an issue in my repo via GitHub MCP"
+→ mcp_tool_request is called with:
+   mcpConfig: { type: "stdio", command: "npx", args: ["-y", "@modelcontextprotocol/server-github"],
+                env: { GITHUB_PERSONAL_ACCESS_TOKEN: "<<secret:github-pat>>" } }
+   tool: "create_issue"
+   parameters: { owner: "my-org", repo: "my-repo", title: "Bug report" }
+```
+
+The GitHub PAT is decrypted and injected into the spawned process environment — it never appears in the LLM context.
+
 ### Manage secrets
 
 ```
@@ -221,9 +278,11 @@ internal/
     list_secrets/            List stored identifiers
     delete_secret/           Delete with confirmation
     http_request/            HTTP client with secret injection
+    mcp_tool_request/        MCP-to-MCP gateway with secret injection
   app/                       Application wiring
   config/                    Configuration loading
   mcp/                       MCP server and tool registration
+  mcp_config/               MCP server config types and loader
   secrets/                   Encryption, key management, Manager interface
   storage/mongo/             MongoDB client and repository
 deployments/
