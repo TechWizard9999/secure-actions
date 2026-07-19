@@ -6,6 +6,7 @@ import (
 	"github.com/kotakarthik/secure-actions/internal/actions/delete_secret"
 	"github.com/kotakarthik/secure-actions/internal/actions/http_request"
 	"github.com/kotakarthik/secure-actions/internal/actions/list_secrets"
+	"github.com/kotakarthik/secure-actions/internal/actions/mcp_tool_request"
 	"github.com/kotakarthik/secure-actions/internal/actions/ping"
 	"github.com/kotakarthik/secure-actions/internal/actions/request_secret"
 	"github.com/kotakarthik/secure-actions/internal/secrets"
@@ -30,6 +31,18 @@ func New(deps Dependencies) *Server {
 			Version: "0.0.1",
 		},
 		nil,
+	)
+
+	mcpSdk.AddTool(
+		server,
+		&mcpSdk.Tool{
+			Name:        "mcp_tool_request",
+			Description: "Universal gateway to call other MCP tools securely with secret injection. Pass the MCP configuration (type, command, args, env) along with the tool name and parameters. Secrets using <<secret:identifier>> placeholders are decrypted within secure-actions and never exposed to the target MCP or LLM context. Example: {\"mcpConfig\": {\"type\": \"stdio\", \"command\": \"npx\", \"args\": [\"@modelcontextprotocol/server-github\"], \"env\": {\"GITHUB_PERSONAL_ACCESS_TOKEN\": \"<<secret:github-pat>>\"}}, \"tool\": \"create_issue\", \"parameters\": {\"owner\": \"user\", \"repo\": \"repo\", \"title\": \"Issue\"}}",
+		},
+		mcp_tool_request.New(mcp_tool_request.Dependencies{
+			SecretManager: deps.SecretManager,
+			EncryptionKey: deps.EncryptionKey,
+		}).Execute,
 	)
 
 	mcpSdk.AddTool(
