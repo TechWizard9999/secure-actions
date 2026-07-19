@@ -6,6 +6,7 @@ import (
 	"log"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/kotakarthik/secure-actions/internal/mcp_config"
 	"github.com/kotakarthik/secure-actions/internal/secrets"
@@ -14,9 +15,16 @@ import (
 
 var secretPlaceholder = regexp.MustCompile(`<<secret:([a-z0-9-]+)>>`)
 
+const (
+	defaultTimeoutMs = 30000
+	maxRetries       = 2
+	baseBackoff      = 500 * time.Millisecond
+)
+
 type Dependencies struct {
 	SecretManager secrets.Manager
 	EncryptionKey []byte
+	Pool          *MCPProcessPool
 }
 
 type Handler struct {
@@ -24,6 +32,9 @@ type Handler struct {
 }
 
 func New(deps Dependencies) *Handler {
+	if deps.Pool == nil {
+		deps.Pool = NewMCPProcessPool()
+	}
 	return &Handler{deps: deps}
 }
 
@@ -47,7 +58,7 @@ func (h *Handler) Execute(
 	}
 
 	// Call the target MCP tool
-	result, err := h.callMCPTool(ctx, input.MCPConfig, input.Tool, resolvedParams)
+	result, err := h.callMCPTool(ctx, input.MCPConfig, input.Tool, resolvedParams, input.TimeoutMs)
 	if err != nil {
 		return nil, Response{Success: false, Error: err.Error()}, nil
 	}
@@ -141,17 +152,15 @@ func (h *Handler) substituteSecretsInString(ctx context.Context, input string) (
 	return b.String(), nil
 }
 
-// callMCPTool connects to target MCP and calls the specified tool
-func (h *Handler) callMCPTool(ctx context.Context, cfg MCPConfig, tool string, params map[string]any) (map[string]any, error) {
+// callMCPTool connects to target MCP and calls the specified tool with retry and timeout
+func (h *Handler) callMCPTool(ctx context.Context, cfg MCPConfig, tool string, params map[string]any, timeoutMs int) (map[string]any, error) {
 	log.Printf("[mcp_tool_request] calling %s with tool %q", cfg.Type, tool)
 
-	// Substitute secrets in env vars before spawning the process
 	resolvedEnv, err := h.substituteSecretsInEnv(ctx, cfg.Env)
 	if err != nil {
 		return nil, fmt.Errorf("substitute secrets in env: %w", err)
 	}
 
-	// Convert to mcp_config.MCPServerConfig
 	mcpCfg := mcp_config.MCPServerConfig{
 		Type:    cfg.Type,
 		Command: cfg.Command,
@@ -160,25 +169,61 @@ func (h *Handler) callMCPTool(ctx context.Context, cfg MCPConfig, tool string, p
 		Env:     resolvedEnv,
 	}
 
-	// Create JSON-RPC client
-	client, err := NewMCPClient(ctx, mcpCfg)
+	if timeoutMs <= 0 {
+		timeoutMs = defaultTimeoutMs
+	}
+	timeout := time.Duration(timeoutMs) * time.Millisecond
+
+	var lastErr error
+	for attempt := 0; attempt <= maxRetries; attempt++ {
+		if attempt > 0 {
+			backoff := baseBackoff * time.Duration(1<<(attempt-1))
+			log.Printf("[mcp_tool_request] retry %d/%d after %v", attempt, maxRetries, backoff)
+			time.Sleep(backoff)
+		}
+
+		result, err := h.callMCPToolOnce(ctx, mcpCfg, tool, params, timeout)
+		if err == nil {
+			return result, nil
+		}
+
+		if !isTransientError(err) {
+			return nil, err
+		}
+
+		lastErr = err
+		h.deps.Pool.Evict(poolKey(mcpCfg))
+	}
+
+	return nil, fmt.Errorf("after %d retries: %w", maxRetries, lastErr)
+}
+
+func (h *Handler) callMCPToolOnce(ctx context.Context, cfg mcp_config.MCPServerConfig, tool string, params map[string]any, timeout time.Duration) (map[string]any, error) {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	client, err := h.deps.Pool.Get(ctx, cfg)
 	if err != nil {
-		return nil, fmt.Errorf("create MCP client: %w", err)
-	}
-	defer client.Close()
-
-	// Perform MCP initialization handshake
-	if err := client.Initialize(ctx); err != nil {
-		return nil, fmt.Errorf("initialize MCP: %w", err)
+		return nil, fmt.Errorf("get pooled client: %w", err)
 	}
 
-	// Call the tool
 	result, err := client.CallTool(ctx, tool, params)
 	if err != nil {
 		return nil, fmt.Errorf("call tool %q: %w", tool, err)
 	}
 
 	return result, nil
+}
+
+func isTransientError(err error) bool {
+	msg := err.Error()
+	transients := []string{"broken pipe", "pipe", "EOF", "Premature close", "connection reset", "process exited"}
+	for _, t := range transients {
+		if strings.Contains(msg, t) {
+			return true
+		}
+	}
+	return false
 }
 
 // substituteSecretsInEnv decrypts <<secret:identifier>> placeholders in environment variable values

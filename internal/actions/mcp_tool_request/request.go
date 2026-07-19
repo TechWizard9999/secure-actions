@@ -12,4 +12,5 @@ type Request struct {
 	MCPConfig  MCPConfig      `json:"mcpConfig" jsonschema:"MCP server configuration (type, command, args, env)"`
 	Tool       string         `json:"tool" jsonschema:"Tool name in target MCP"`
 	Parameters map[string]any `json:"parameters,omitempty" jsonschema:"Tool input parameters (string values may contain <<secret:identifier>> placeholders)"`
+	TimeoutMs  int            `json:"timeoutMs,omitempty" jsonschema:"Request timeout in milliseconds (default: 30000)"`
 }

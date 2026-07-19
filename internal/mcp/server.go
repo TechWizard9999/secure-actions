@@ -33,6 +33,8 @@ func New(deps Dependencies) *Server {
 		nil,
 	)
 
+	mcpPool := mcp_tool_request.NewMCPProcessPool()
+
 	mcpSdk.AddTool(
 		server,
 		&mcpSdk.Tool{
@@ -42,6 +44,7 @@ func New(deps Dependencies) *Server {
 		mcp_tool_request.New(mcp_tool_request.Dependencies{
 			SecretManager: deps.SecretManager,
 			EncryptionKey: deps.EncryptionKey,
+			Pool:          mcpPool,
 		}).Execute,
 	)
 
