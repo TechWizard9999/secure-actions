@@ -104,6 +104,52 @@ On first run, the server will:
 
 No manual setup required.
 
+## Configuration
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `MONGO_URI` | `mongodb://localhost:27018` | MongoDB connection string |
+| `SECURE_ACTIONS_KEY_PATH` | `~/.secure-actions/master.key` | Path to the master encryption key |
+| `MONGO_TLS` | `false` | Enable TLS/SSL for MongoDB connection |
+| `MONGO_TLS_CA_FILE` | | Path to CA certificate file for TLS |
+| `MONGO_CERT_FILE` | | Path to client certificate file (for mTLS) |
+| `MONGO_KEY_FILE` | | Path to client key file (for mTLS) |
+| `MONGO_AUTH_DB` | `admin` | Authentication database |
+| `MONGO_USERNAME` | | Username for MongoDB authentication |
+| `MONGO_PASSWORD` | | Password for MongoDB authentication |
+
+### MongoDB with TLS/SSL
+
+To connect to MongoDB with TLS:
+
+```bash
+MONGO_TLS=true \
+MONGO_TLS_CA_FILE=/path/to/ca.pem \
+MONGO_CERT_FILE=/path/to/client.pem \
+MONGO_KEY_FILE=/path/to/client.key \
+secure-actions
+```
+
+### MongoDB with Username/Password Authentication
+
+```bash
+MONGO_USERNAME=myuser \
+MONGO_PASSWORD=mypassword \
+MONGO_AUTH_DB=admin \
+secure-actions
+```
+
+### MongoDB with TLS and Authentication Combined
+
+```bash
+MONGO_TLS=true \
+MONGO_TLS_CA_FILE=/path/to/ca.pem \
+MONGO_USERNAME=myuser \
+MONGO_PASSWORD=mypassword \
+MONGO_AUTH_DB=admin \
+secure-actions
+```
+
 ## Tools
 
 ### `ping`
